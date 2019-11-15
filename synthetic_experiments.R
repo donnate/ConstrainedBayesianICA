@@ -1,126 +1,8 @@
 ##### Pipeline for the Bayesian ICA model
-source('/scratch/users/cdonnat/Bayesian_ICA/auxiliary_functions.R')
-source('/scratch/users/cdonnat/Bayesian_ICA/losses_covariance.R')
-source('/scratch/users/cdonnat/Bayesian_ICA/graph_generation.R')
+source('Bayesian_ICA/auxiliary_functions.R')
+source('Bayesian_ICA/losses_covariance.R')
+source('Bayesian_ICA/graph_generation.R')
 
-
-
-exec_code <-"
-data {
-        int N;  /// number of data points
-        int T;  /// dimension (time)
-        int<lower=1> K;  /// latent dimension
-        matrix[T, N] X;  //data
-        matrix[N, N] Structural_precision;  // regularization corresponding to structural information
-
-        /// hyper parameters for the model
-
-}
-
-parameters{
-   matrix[K, N] A1;    // loadings
-   positive_ordered[K] Lambda;
-   //matrix<lower=0, upper=1>[K, N] D;
-   matrix[T, K] S;   // matrix sources latent signal
-   real<lower=0> sigma_noise_inv;
-   simplex[K] Dvec[N];
-}
-
-transformed parameters{
-        real<lower=0> sigma_noise;
-        matrix<lower=0>[K, N] A;    // loadings
-        matrix<lower=0, upper=1>[K, N] D;
-        sigma_noise= inv(sigma_noise_inv);
-        for (i in 1:N){
-                D[,i] = sqrt(Dvec[i][1:K]);
-        }
-        A = fabs(A1);
-}
-
-model{
-
-        for (k in 1:K){    //
-            A1[k,] ~ multi_normal_prec(D[k,], Structural_precision);
-            target += log_mix(0.2, gamma_lpdf(Lambda[k]  | 10., 10.), gamma_lpdf(Lambda[k]| 0.01, 1.));
-        }
-
-        for (i in 1:N){
-                Dvec[i] ~ dirichlet(rep_vector(1.0/(K), K));
-        }
-
-        //// Generate the sources
-        for (i in 1:K){
-                for (t in 1:T){
-                        S[t,i] ~ double_exponential(0, 1.0/sqrt(2));
-                }
-        }
-    sigma_noise_inv ~ gamma(1., 1.);
-        to_vector(X) ~ normal(to_vector(S * diag_matrix(Lambda)* (A .* D)), sigma_noise);
-}
-
-generated quantities{
-        matrix[T, N] Y;
-        matrix[K, N] Loadings;
-        Y  = S * diag_matrix(Lambda) *  (A .* D);
-        Loadings  = diag_matrix(Lambda) *  (A .* D);
-}
-
-
-"
-exec_code2<-"
-data {
-        int N;  /// number of data points
-        int T;  /// dimension (time)
-        int<lower=1> K;  /// latent dimension
-        matrix[T, N] X;  //data
-        matrix[N, N] Structural_precision;  // regularization corresponding to structural information
-
-        /// hyper parameters for the model
-
-}
-
-parameters{
-   matrix[K, N] A1;    // loadings
-   positive_ordered[K] Lambda;
-   matrix[T, K] S;   // matrix sources latent signal
-   real<lower=0> sigma_noise_inv;
-
-}
-
-transformed parameters{
-        real<lower=0> sigma_noise;
-        matrix<lower=0>[K, N] A;    // loadings
-
-        sigma_noise= inv(sigma_noise_inv);
-        A = fabs(A1);
-}
-
-model{
-
-        for (k in 1:K){    //
-            A1[k,] ~ multi_normal_prec(rep_vector(0, N), Structural_precision);
-                target += log_mix(0.2, gamma_lpdf(Lambda[k]  | 10., 10.), gamma_lpdf(Lambda[k]| 0.01, 1.));
-        }
-
-
-        //// Generate the sources
-        for (i in 1:K){
-                for (t in 1:T){
-                        S[t,i] ~ double_exponential(0, 1.0/sqrt(2));
-                }
-        }
-    sigma_noise_inv ~ gamma(1., 1.);
-        to_vector(X) ~ normal(to_vector(S * diag_matrix(Lambda)* A), sigma_noise);
-}
-
-generated quantities{
-        matrix[T, N] Y;
-        matrix[K, N] Loadings;
-        Y  = S * diag_matrix(Lambda) *  A ;
-        Loadings  = diag_matrix(Lambda) *  A;
-}
-
-"
 
 is.installed <- function(mypkg){
     is.element(mypkg, installed.packages(lib.loc="~/R_libs")[,1])
@@ -136,7 +18,7 @@ library(igraph, lib.loc = "~/R_libs")
 library(MASS)
 library(fastICA, lib.loc="~/R_libs")
 
-#Sys.setenv(USE_CXX14 = 1)
+Sys.setenv(USE_CXX14 = 1)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
@@ -219,8 +101,8 @@ for (g in 1:G){
 
 
 ########## FIT THE MODEL #################
-m.full <- stan_model(model_code = exec_code)
-m.ns <- stan_model(model_code =exec_code2) #file="/scratch/users/cdonnat/Bayesian_ICA/ICA_relaxed4_no_sparsity.stan")
+m.full <- stan_model(file="ICA_final.stan")
+m.ns <- stan_model(file="ICA_no_sparsity.stan")
 
 Y.vb <- list()
 A1.vb <- list()
@@ -272,7 +154,7 @@ for (g in 1:G){
                  tol = 0.0001, verbose = TRUE)
    VanillaICA_A[[ind]] <- A$A
    VanillaICA_S[[ind]] <- A$S	  
-   sv_file = paste('/scratch/users/cdonnat/Bayesian_ICA/synthetic/results/FINAL_FINAL_', save_folder, '_prior', toString(transform_prior), '.RData', sep='')
+   sv_file = paste('results_synthetic/FINAL_', save_folder, '_prior', toString(transform_prior), '.RData', sep='')
    save.image(sv_file) 
    old_A = abs(VanillaICA_A[[ind]])
    norm_A  = apply(old_A, 1, sum)

@@ -1,7 +1,7 @@
 ##### Pipeline for the Bayesian ICA model
-source('~/Dropbox/Bayesian_ICA/auxiliary_functions.R')
-source('~/Dropbox/Bayesian_ICA/losses_covariance.R')
-source('~/Dropbox/Bayesian_ICA/graph_generation.R')
+source('auxiliary_functions.R')
+source('losses_covariance.R')
+source('graph_generation.R')
 
 
 
@@ -32,8 +32,8 @@ G = 10
 B = 3
 K = 20
 
-#save_folder = args[2]
-save_folder = 'final_test_truly_scaled'
+save_folder = args[2]
+
 
 
 
@@ -97,7 +97,7 @@ for (g in 1:G){
 
 
 ########## FIT THE MODEL #################
-m <- stan_model(file="~/Dropbox/Bayesian_ICA/ICA_sunday.stan")
+m <- stan_model(file="ICA.stan")
 Y.vb <- list()
 A1.vb <- list()
 A_tilde1.vb <- list()
@@ -164,7 +164,7 @@ for (g in 1:G){
     sigma_noise.stan[[(g-1)*B + b]] = mean(rstan::extract(stan.fit,"sigma_noise")[[1]])    
     
 
-    sv_file2 = paste('~/Dropbox/Bayesian_ICA/synthetic/results/', save_folder,'_mcmc.RData', sep='')
+    sv_file2 = paste('synthetic/results/', save_folder,'_mcmc.RData', sep='')
     save.image(sv_file2) 
 
                     
@@ -174,7 +174,7 @@ for (g in 1:G){
 
 
 ########## SAVE EVERYTHING #################
-sv_file = paste('~/Dropbox/Bayesian_ICA/synthetic/results/', save_folder,'.RData', sep='')
+sv_file = paste('synthetic/results/', save_folder,'.RData', sep='')
 
 save.image(sv_file) 
 

@@ -1,5 +1,5 @@
 ##### LOSSES ##########
-source('/scratch/users/cdonnat/Bayesian_ICA/auxiliary_functions.R')
+source('auxiliary_functions.R')
 
 operator_norm <- function(A, B){
   l = sort(abs(eigen(A-B, only.values = TRUE)$values))
